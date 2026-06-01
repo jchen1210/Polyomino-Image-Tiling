@@ -7,6 +7,7 @@ import os
 import random
 import uuid
 import json
+from core import Polyomino, TileSet, Tile
 
 ###############################
 # Problem Dimensions
@@ -26,29 +27,6 @@ np.random.seed(42)
 # Polyomino definitions
 ###############################
 
-class Polyomino:
-    def __init__(self, name, blocks):
-        self.name = name
-        self.blocks = blocks
-        self.height = max(r for r,c in blocks) + 1
-        self.width  = max(c for r,c in blocks) + 1
-
-    def rotate(self):
-        rotated = [(c, -r) for r,c in self.blocks]
-        min_r = min(r for r,c in rotated)
-        min_c = min(c for r,c in rotated)
-        rotated = [(r-min_r, c-min_c) for r,c in rotated]
-        return Polyomino(self.name, rotated)
-
-    def rotations(self):
-        rots = []
-        s = self
-        for _ in range(4):
-            if not any(set(s.blocks) == set(r.blocks) for r in rots):
-                rots.append(s)
-            s = s.rotate()
-        return rots
-
 POLYOMINOES = [
     Polyomino("L",  [(0,0),(0,1),(1,0)]),
     Polyomino("I3", [(0,0),(0,1),(0,2)]),
@@ -60,7 +38,7 @@ POLYOMINOES = [
 # Load palette config
 ###############################
 
-PALETTE_CONFIG = os.path.join(os.path.dirname(__file__), "../colors/starry-night.json")
+PALETTE_CONFIG = os.path.join(os.path.dirname(__file__), "colors/starry-night.json")
 
 with open(PALETTE_CONFIG, "r") as f:
     palette_data = json.load(f)
@@ -68,17 +46,11 @@ with open(PALETTE_CONFIG, "r") as f:
 palette = [tuple(color) for color in palette_data["colors"]]
 NUM_COLORS = len(palette)
 
-# each color gets assigned a single shape -- i.e not all shapes are available in all possible colors
-color_to_polyomino = {
-    c: POLYOMINOES[c % len(POLYOMINOES)]
-    for c in range(NUM_COLORS)
-}
-
 ###############################
 # Load target image 
 ###############################
 
-TARGET_IMAGE_PATH = os.path.join(os.path.dirname(__file__), '../sources/starry-night.jpg')
+TARGET_IMAGE_PATH = os.path.join(os.path.dirname(__file__), 'sources/starry-night.jpg')
 OUTPUT_IMAGE = f"output/edge-aware-v1-monalisa-{uuid.uuid4().hex}.png"
 
 img = Image.open(TARGET_IMAGE_PATH).convert("L")
@@ -131,37 +103,19 @@ colored_tiles, brightness_values = generate_palette()
 normalized_brightness = (brightness_values - brightness_values.min()) / \
                         (brightness_values.max() - brightness_values.min()) * 9
 
+color_to_brightness = {(r, g, b) : normalized_brightness[i] for i, (r, g, b) in enumerate(palette)}
+colour_to_index = {(r, g, b) : i for i, (r, g, b) in enumerate(palette)}
+
 ###############################
 # Placement generation
 ###############################
 
-placements = []
-block_to_placements = defaultdict(list)
+tiles = [Tile(POLYOMINOES[i % len(POLYOMINOES)], tuple(color)) for i, color in enumerate(palette_data["colors"])]
+tileset = TileSet(tiles, SCALES)
 
-def expanded_blocks(shape, scale, anchor):
-    ai, aj = anchor
-    blocks = []
-    for dr, dc in shape.blocks:
-        for u in range(scale):
-            for v in range(scale):
-                i = ai + dr*scale + u
-                j = aj + dc*scale + v
-                blocks.append((i,j))
-    return blocks
-
-for c in range(NUM_COLORS):
-    base = color_to_polyomino[c]
-    for shape in base.rotations():
-        for S in SCALES:
-            max_i = NUM_ROWS - shape.height*S
-            max_j = NUM_COLS - shape.width*S
-            for i in range(max_i + 1):
-                for j in range(max_j + 1):
-                    blocks = expanded_blocks(shape, S, (i,j))
-                    p = len(placements)
-                    placements.append((c, shape, S, (i,j), blocks))
-                    for block in blocks:
-                        block_to_placements[block].append(p)
+tileset.set_placements(NUM_COLS, NUM_ROWS)
+placements = tileset.placements
+block_to_placements = tileset.block_to_placements()
 
 NUM_PLACEMENTS = len(placements)
 print("Total placements:", NUM_PLACEMENTS)
@@ -183,18 +137,19 @@ for i in range(NUM_ROWS):
 
 costs = np.zeros(NUM_PLACEMENTS)
 
-for p, (c, shape, S, (i,j), blocks) in enumerate(placements):
+for p, (tile, (i,j)) in enumerate(placements):
     err = 0
     max_edge = 0
-    for (ii,jj) in blocks:
-        err += (normalized_brightness[c]-block_brightness[ii,jj])**2
+    for (ii,jj) in tile.anchor_footprint((i, j)):
+        err += (normalized_brightness[colour_to_index[tile.colour]] - block_brightness[ii,jj])**2
         max_edge = max(max_edge, edge_block[ii,jj])
 
-    err /= len(blocks)
-    edge_pen = EDGE_WEIGHT * max_edge * (S-1)**2
-    size_bonus = -SIZE_BONUS * (S-1)
+    edge_pen = EDGE_WEIGHT * max_edge * (tile.scale - 1)**2
+    size_bonus = -SIZE_BONUS * (tile.scale - 1)
 
     costs[p] = err + edge_pen + size_bonus
+
+
 
 problem = cp.Problem(cp.Minimize(costs @ x), constraints)
 
@@ -218,29 +173,30 @@ draw = ImageDraw.Draw(result)
 
 for p, val in enumerate(x.value):
     if val > 0.5:
-        c, shape, S, (i,j), blocks = placements[p]
-        block_set = set(blocks)
+        tile, (i, j) = placements[p]
+        footprint = tile.anchor_footprint((i, j))
+        footprint_set = set(footprint)
 
-        for (ii,jj) in blocks:
+        for (ii,jj) in footprint:
             result.paste(
-                colored_tiles[c],
+                colored_tiles[colour_to_index[tile.colour]],
                 (jj*BLOCK_SIZE, ii*BLOCK_SIZE)
             )
 
         # borders
-        for (ii,jj) in blocks:
+        for (ii,jj) in footprint:
             x0 = jj * BLOCK_SIZE
             y0 = ii * BLOCK_SIZE
             x1 = x0 + BLOCK_SIZE
             y1 = y0 + BLOCK_SIZE
 
-            if (ii-1, jj) not in block_set:
+            if (ii-1, jj) not in footprint_set:
                 draw.line([(x0,y0),(x1,y0)], fill=(0,0,0), width=2)
-            if (ii+1, jj) not in block_set:
+            if (ii+1, jj) not in footprint_set:
                 draw.line([(x0,y1),(x1,y1)], fill=(0,0,0), width=2)
-            if (ii, jj-1) not in block_set:
+            if (ii, jj-1) not in footprint_set:
                 draw.line([(x0,y0),(x0,y1)], fill=(0,0,0), width=2)
-            if (ii, jj+1) not in block_set:
+            if (ii, jj+1) not in footprint_set:
                 draw.line([(x1,y0),(x1,y1)], fill=(0,0,0), width=2)
 
 result.save(OUTPUT_IMAGE)

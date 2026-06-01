@@ -4,11 +4,12 @@ class Polyomino:
     '''
     A Polyomino shape, equipped with the ability to rotate and rescale
     '''
-    def __init__(self, name: str, footprint: list):
+    def __init__(self, name: str, footprint: list, scale: int = 1):
         self.name = name
         self.footprint = footprint
         self.height = max(r for r,c in footprint) + 1
         self.width  = max(c for r,c in footprint) + 1
+        self.scale = scale
 
     def rotate(self) -> 'Polyomino':
         rotated = [(c, -r) for r,c in self.footprint]
@@ -17,7 +18,7 @@ class Polyomino:
         rotated = [(r-min_r, c-min_c) for r,c in rotated]
         return Polyomino(self.name, rotated)
 
-    def get_rotations(self) -> list['Polyomino']:
+    def rotations(self) -> list['Polyomino']:
         rots = []
         s = self
         for _ in range(4):
@@ -26,7 +27,7 @@ class Polyomino:
             s = s.rotate()
         return rots
     
-    def get_scaled(self, scale: int) -> 'Polyomino':
+    def scaled(self, scale: int) -> 'Polyomino':
         scaled_footprint = []
         for dr, dc in self.footprint:
             for u in range(scale):
@@ -34,29 +35,45 @@ class Polyomino:
                     i = dr*scale + u
                     j = dc*scale + v
                     scaled_footprint.append((i,j))
-        scaled = Polyomino(self.name + "_x" + scale, scaled_footprint)
+        scaled = Polyomino(f"{self.name}_x{scale}", scaled_footprint, scale)
         return scaled
     
 class Tile:
     '''
     A Polyomino tile with a colour
     '''
-    def __init__(self, shape: Polyomino, colour: tuple):
-        self.shape = shape
+    def __init__(self, polyomino: Polyomino, colour: tuple[int, int, int]):
+        self._polyomino = polyomino
         self.colour = colour
 
-    def anchor_footprint(self, anchor: tuple) -> list:
+    def anchor_footprint(self, anchor: tuple) -> list[tuple]:
         anchored_footprint = []
-        for block in self.shape.footprint:
+        for block in self.footprint:
             anchored_footprint.append((block[0] + anchor[0], block[1] + anchor[1]))
         return anchored_footprint
 
+    def rotations(self) -> list['Tile']:
+        rots = [Tile(rot, self.colour) for rot in self._polyomino.rotations()]
+        return rots
     
-    def get_rotations(self) -> list[Polyomino]:
-        return self.shape.get_rotations()
-
-    def get_scaled(self, scale: int) -> 'Tile':
-        return Tile(self.shape.get_scaled(scale), self.colour)
+    def scaled(self, scale: int) -> 'Tile':
+        return Tile(self._polyomino.scaled(scale), self.colour)
+    
+    @property
+    def height(self) -> int:
+        return self._polyomino.height
+    
+    @property
+    def width(self) -> int:
+        return self._polyomino.width
+    
+    @property
+    def footprint(self) -> list[tuple]:
+        return self._polyomino.footprint
+    
+    @property
+    def scale(self) -> int:
+        return self._polyomino.scale
     
 
 
@@ -77,26 +94,28 @@ class TileSet:
 
         for tile in base_tiles:
             for scale in self.scales:
-                for rotation in tile.get_rotations:
-                    self.tiles.append(rotation.get_scaled(rotation))
+                for rotation in tile.rotations():
+                    self.tiles.append(rotation.scaled(scale))
 
     def set_placements(self, width: int, height: int) -> list:
         self.width = width
         self.height = height
         placements = []
+
         for tile in self.tiles:
-            for i in range(height - tile.height):
-                for j in range(width - tile.width):
+            for i in range(height - tile.height + 1):
+                for j in range(width - tile.width + 1):
                     placements.append((tile, (i, j)))
 
         self.placements = placements
         return self.placements
     
     def block_to_placements(self) -> dict:
-        block_to_placements = defaultdict()
+        block_to_placements = defaultdict(list)
         for i, placement in enumerate(self.placements):
             tile = placement[0]
             anchor = placement[1]
             for block in tile.anchor_footprint(anchor):
                 block_to_placements[block].append(i)
+        return block_to_placements
     
