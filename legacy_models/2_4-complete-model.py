@@ -60,18 +60,18 @@ POLYOMINOES = [
 # Load palette config
 ###############################
 
-PALETTE_CONFIG = os.path.join(os.path.dirname(__file__), "../colors/starry-night.json")
+PALETTE_CONFIG = os.path.join(os.path.dirname(__file__), "../colours/starry-night-colours.json")
 
 with open(PALETTE_CONFIG, "r") as f:
     palette_data = json.load(f)
 
-palette = [tuple(color) for color in palette_data["colors"]]
-NUM_COLORS = len(palette)
+palette = [tuple(colour) for colour in palette_data["colours"]]
+NUM_COLOURS = len(palette)
 
-# each color gets assigned a single shape -- i.e not all shapes are available in all possible colors
-color_to_polyomino = {
+# each colour gets assigned a single shape -- i.e not all shapes are available in all possible colours
+colour_to_polyomino = {
     c: POLYOMINOES[c % len(POLYOMINOES)]
-    for c in range(NUM_COLORS)
+    for c in range(NUM_COLOURS)
 }
 
 ###############################
@@ -90,7 +90,7 @@ for i in range(NUM_ROWS):
     for j in range(NUM_COLS):
         block = img_arr[i*BLOCK_SIZE:(i+1)*BLOCK_SIZE,
                         j*BLOCK_SIZE:(j+1)*BLOCK_SIZE]
-        block_brightness[i,j] = round(block.mean() / 255.0 * (NUM_COLORS - 1))
+        block_brightness[i,j] = round(block.mean() / 255.0 * (NUM_COLOURS - 1))
 
 ###############################
 # Edge map
@@ -126,7 +126,7 @@ def generate_palette():
     brightness_vals = np.array(brightness_vals)
     return tiles, brightness_vals
 
-colored_tiles, brightness_values = generate_palette()
+coloured_tiles, brightness_values = generate_palette()
 
 normalized_brightness = (brightness_values - brightness_values.min()) / \
                         (brightness_values.max() - brightness_values.min()) * 9
@@ -149,8 +149,8 @@ def expanded_blocks(shape, scale, anchor):
                 blocks.append((i,j))
     return blocks
 
-for c in range(NUM_COLORS):
-    base = color_to_polyomino[c]
+for c in range(NUM_COLOURS):
+    base = colour_to_polyomino[c]
     for shape in base.rotations():
         for S in SCALES:
             max_i = NUM_ROWS - shape.height*S
@@ -223,7 +223,7 @@ for p, val in enumerate(x.value): # type: ignore
 
         for (ii,jj) in blocks:
             result.paste(
-                colored_tiles[c],
+                coloured_tiles[c],
                 (jj*BLOCK_SIZE, ii*BLOCK_SIZE)
             )
 

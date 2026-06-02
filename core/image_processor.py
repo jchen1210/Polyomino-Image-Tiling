@@ -5,7 +5,7 @@ from .config import ImageSettings
 import numpy as np
 import json
 
-NUM_COLORS = 10
+NUM_COLOURS = 10
 
 class ImageData:
     '''
@@ -54,7 +54,7 @@ class ImageData:
             for j in range(num_cols):
                 block = self.img_arr[i*block_size:(i+1)*block_size,
                                      j*block_size:(j+1)*block_size]
-                block_brightness[i,j] = round(block.mean() / 255.0 * (NUM_COLORS - 1))
+                block_brightness[i,j] = round(block.mean() / 255.0 * (NUM_COLOURS - 1))
         
         return block_brightness
 

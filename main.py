@@ -31,7 +31,7 @@ OUTPUT_IMAGE = f"output/edge-aware-v1-monalisa-{uuid.uuid4().hex}.png"
 '''
 image_settings = ImageSettings(NUM_ROWS, NUM_COLS, BLOCK_SIZE)
 optimization_settings = OptimizationSettings(EDGE_WEIGHT, SIZE_BONUS)
-palette = Palette("./colors/starry-night.json")
+palette = Palette("./colours/starry-night-colours.json")
 image_data = ImageData("./sources/starry-night.jpg", image_settings)
 
 ###############################
@@ -45,7 +45,7 @@ POLYOMINOES = [
     Polyomino("D2v",[(0,0),(1,0)])
 ]
 
-tiles = [Tile(POLYOMINOES[i % len(POLYOMINOES)], tuple(color)) for i, color in enumerate(palette.colours)]
+tiles = [Tile(POLYOMINOES[i % len(POLYOMINOES)], tuple(colour)) for i, colour in enumerate(palette.colours)]
 tileset = TileSet(tiles, SCALES)
 tileset.set_placements(NUM_COLS, NUM_ROWS)
 

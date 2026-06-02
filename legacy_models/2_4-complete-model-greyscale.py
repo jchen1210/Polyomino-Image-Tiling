@@ -14,7 +14,7 @@ import uuid
 NUM_ROWS = 10
 NUM_COLS = 10
 BLOCK_SIZE = 8
-NUM_COLORS = 10
+NUM_COLOURS = 10
 SCALES = [1, 2, 4, 8]
 EDGE_WEIGHT = 4.0
 SIZE_BONUS = 2.0
@@ -61,11 +61,11 @@ POLYOMINOES = [
     Polyomino("D2v",[(0,0),(1,0)])
 ]
 
-# Each polyomino gets assigned a single color. This makes things a little more interesting since the linear
-# program now has to balance tiling + brightness/color-matching constraints!
-color_to_polyomino = {
+# Each polyomino gets assigned a single colour. This makes things a little more interesting since the linear
+# program now has to balance tiling + brightness/colour-matching constraints!
+colour_to_polyomino = {
     c: random.choice(POLYOMINOES)
-    for c in range(NUM_COLORS)
+    for c in range(NUM_COLOURS)
 }
 
 ###############################
@@ -86,7 +86,7 @@ for i in range(NUM_ROWS):
             i*BLOCK_SIZE:(i+1)*BLOCK_SIZE,
             j*BLOCK_SIZE:(j+1)*BLOCK_SIZE
         ]
-        block_brightness[i,j] = round(block.mean() / 255.0 * (NUM_COLORS - 1))
+        block_brightness[i,j] = round(block.mean() / 255.0 * (NUM_COLOURS - 1))
 
 # apply the Laplacian operator to the image to get an "edge map" (i.e pixels that are around edges 
 # in the image get a high value, while pixels in a relatively flat region get a low value)
@@ -112,19 +112,19 @@ print(edge_block)
 def generate_tiles():
     tiles = []
     vals  = []
-    for c in range(NUM_COLORS):
-        v = int(c / (NUM_COLORS - 1) * 255)
+    for c in range(NUM_COLOURS):
+        v = int(c / (NUM_COLOURS - 1) * 255)
         t = Image.new("L", (BLOCK_SIZE, BLOCK_SIZE), v)
         tiles.append(t)
         vals.append(v)
     vals = np.array(vals)
     return tiles, vals
 
-colored_tiles, brightness_values = generate_tiles()
+coloured_tiles, brightness_values = generate_tiles()
 
 # Brings all brightness values in the discrete range [0, 9]
 normalized_brightness = (brightness_values - brightness_values.min()) / \
-                        (brightness_values.max() - brightness_values.min()) * (NUM_COLORS - 1)
+                        (brightness_values.max() - brightness_values.min()) * (NUM_COLOURS - 1)
 
 ###############################
 # Placement generation
@@ -146,8 +146,8 @@ def expanded_blocks(shape, scale, anchor):
                 blocks.append((i,j))
     return blocks
 
-for c in range(NUM_COLORS):
-    base = color_to_polyomino[c]
+for c in range(NUM_COLOURS):
+    base = colour_to_polyomino[c]
     for shape in base.rotations():
         for S in SCALES:
             max_i = NUM_ROWS - shape.height*S
@@ -217,7 +217,7 @@ for p, val in enumerate(x.value):
 
         for (ii,jj) in blocks:
             result.paste(
-                colored_tiles[c],
+                coloured_tiles[c],
                 (jj*BLOCK_SIZE, ii*BLOCK_SIZE)
             )
 

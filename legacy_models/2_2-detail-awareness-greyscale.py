@@ -12,7 +12,7 @@ from skimage import filters
 
 NUM_ROWS = 40
 NUM_COLS = 30
-NUM_COLORS = 10
+NUM_COLOURS = 10
 TILE_SIZES = [1, 2, 4, 8]
 BLOCK_SIZE = 8
 EDGE_WEIGHT = 4.0
@@ -34,14 +34,14 @@ def generate_grayscale_tiles(num_tiles=10, tile_size=100):
 
     return tiles, np.array(brightness_values)
 
-colored_tiles, brightness_values = generate_grayscale_tiles(
-    num_tiles=NUM_COLORS,
+coloured_tiles, brightness_values = generate_grayscale_tiles(
+    num_tiles=NUM_COLOURS,
     tile_size=BLOCK_SIZE*max(TILE_SIZES), # tiles are scaled down for each size later
 )
 
 # Brings all brightness values in the discrete range [0, 9]
 normalized_brightness = (brightness_values - brightness_values.min()) / \
-                        (brightness_values.max() - brightness_values.min()) * (NUM_COLORS - 1)
+                        (brightness_values.max() - brightness_values.min()) * (NUM_COLOURS - 1)
 
 ###############################
 # Load target image 
@@ -61,7 +61,7 @@ for i in range(NUM_ROWS):
         block = img_array[i*BLOCK_SIZE:(i+1)*BLOCK_SIZE,
                           j*BLOCK_SIZE:(j+1)*BLOCK_SIZE]
         # again, bring the brightness value in the discrete range [0, 9]
-        block_brightness[i,j] = round(block.mean() / 255.0 * (NUM_COLORS - 1))
+        block_brightness[i,j] = round(block.mean() / 255.0 * (NUM_COLOURS - 1))
 
 # apply the Laplacian operator to the image to get an "edge map" (i.e pixels that are around edges 
 # in the image get a high value, while pixels in a relatively flat region get a low value)
@@ -86,8 +86,8 @@ print(edge_block)
 
 print(f"Building model with {NUM_ROWS}x{NUM_COLS} = {NUM_ROWS*NUM_COLS} blocks...")
 
-# Decision variables: x[c, i, j, s] ∈ {0,1} if color c at block (i,j) with size s
-x = cp.Variable((NUM_COLORS, NUM_ROWS, NUM_COLS, len(TILE_SIZES)), boolean=True)
+# Decision variables: x[c, i, j, s] ∈ {0,1} if colour c at block (i,j) with size s
+x = cp.Variable((NUM_COLOURS, NUM_ROWS, NUM_COLS, len(TILE_SIZES)), boolean=True)
 constraints = []
 
 # Each block is covered exactly once
@@ -97,7 +97,7 @@ for i in range(NUM_ROWS):
         print(f"  Processing row {i}/{NUM_ROWS}...")
     for j in range(NUM_COLS):
         cover_blocks = []
-        for c in range(NUM_COLORS):
+        for c in range(NUM_COLOURS):
             for s_idx, s in enumerate(TILE_SIZES):
                 # check all possible top-left positions that could cover block (i,j)
                 # in other words, any (i', j') is included in the footprint of block with top-left
@@ -117,7 +117,7 @@ print(f"Total constraints: {len(constraints)}")
 print("Building objective function...")
 objective_terms = []
 
-for c in range(NUM_COLORS):
+for c in range(NUM_COLOURS):
     for i in range(NUM_ROWS):
         for j in range(NUM_COLS):
             for s_idx, s in enumerate(TILE_SIZES):
@@ -172,13 +172,13 @@ placed_blocks = np.zeros((NUM_ROWS, NUM_COLS), dtype=bool)
 
 for i in range(NUM_ROWS):
     for j in range(NUM_COLS):
-        for c in range(NUM_COLORS):
+        for c in range(NUM_COLOURS):
             for s_idx, s in enumerate(TILE_SIZES):
                 # checking > 0.5 to avoid floating point equality issues (i.e 1 != 1.0000001)
                 if i+s <= NUM_ROWS and j+s <= NUM_COLS and solution[c,i,j,s_idx] > 0.5:
                     # Check if this is a top-left corner that hasn't been placed
                     if not placed_blocks[i,j]:
-                        tile = colored_tiles[c].resize((s*BLOCK_SIZE, s*BLOCK_SIZE), Image.NEAREST)
+                        tile = coloured_tiles[c].resize((s*BLOCK_SIZE, s*BLOCK_SIZE), Image.NEAREST)
                         
                         # draw a black border around the tile 
                         draw = ImageDraw.Draw(tile)
@@ -204,7 +204,7 @@ print(f"\nSaved mosaic with edge-aware tile sizes: {OUTPUT_IMAGE}")
 tile_size_counts = {s: 0 for s in TILE_SIZES}
 for i in range(NUM_ROWS):
     for j in range(NUM_COLS):
-        for c in range(NUM_COLORS):
+        for c in range(NUM_COLOURS):
             for s_idx, s in enumerate(TILE_SIZES):
                 if i+s <= NUM_ROWS and j+s <= NUM_COLS and solution[c,i,j,s_idx] > 0.5:
                     tile_size_counts[s] += 1
