@@ -1,8 +1,7 @@
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image
 import os
 import random
-import uuid
 import json
 from core import Polyomino, TileSet, Tile, OptimizationSettings, ImageSettings, ImageData, Palette, TilingOptimizer, TilingRenderer
 
@@ -25,14 +24,18 @@ np.random.seed(42)
 ###############################
 
 TARGET_IMAGE_PATH = os.path.join(os.path.dirname(__file__), 'sources/starry-night.jpg')
-OUTPUT_IMAGE = f"output/new-starrynight.png"
-'''
-OUTPUT_IMAGE = f"output/edge-aware-v1-monalisa-{uuid.uuid4().hex}.png"
-'''
+OUTPUT_IMAGE_PATH = f"output/new-starrynight.png"
+image = Image.open(TARGET_IMAGE_PATH)
+
+PALETTE_PATH = os.path.join(os.path.dirname(__file__), 'colours/starry-night-colours.json')
+with open(PALETTE_PATH, "r") as f:
+    palette_data = json.load(f)
+colours = [tuple(colour) for colour in palette_data['colours']]
+
 image_settings = ImageSettings(NUM_ROWS, NUM_COLS, BLOCK_SIZE)
 optimization_settings = OptimizationSettings(EDGE_WEIGHT, SIZE_BONUS)
-palette = Palette("./colours/starry-night-colours.json")
-image_data = ImageData("./sources/starry-night.jpg", image_settings)
+palette = Palette(colours)
+image_data = ImageData(image, image_settings)
 
 ###############################
 # Tile setup
@@ -54,14 +57,21 @@ tileset.set_placements(NUM_COLS, NUM_ROWS)
 ###############################
 
 tiling_optimizer = TilingOptimizer(image_data, tileset, optimization_settings, palette)
-values = tiling_optimizer.solve()
+result = tiling_optimizer.solve()
 
 ###############################
 # Render image
 ###############################
 
-renderer = TilingRenderer(tileset, palette, values, image_settings)
-result = renderer.render()
+if result.is_success:
+    assert result.values is not None
+    
+    print('Problem status: optimal')
+    renderer = TilingRenderer(tileset, palette, result.values, image_settings)
+    output_image = renderer.render()
 
-result.save(OUTPUT_IMAGE)
-print("Saved:", OUTPUT_IMAGE)
+    output_image.save(OUTPUT_IMAGE_PATH)
+    print("Saved:", OUTPUT_IMAGE_PATH)
+else:
+    print(f'Problem status: {result.status}')
+    print(f'No output image was generated')

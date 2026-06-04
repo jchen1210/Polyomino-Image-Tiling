@@ -1,8 +1,20 @@
 import numpy as np
 import cvxpy as cp
+from dataclasses import dataclass
+from typing import Optional
 from .tiles import TileSet, Tile
 from .config import OptimizationSettings
 from .image_processor import ImageData, Palette
+
+@dataclass
+class SolverResult:
+    '''
+    A result packet from the optimizer
+    '''
+    is_success: bool
+    status: str
+    values: Optional[np.ndarray] = None
+
 
 class TilingOptimizer:
     '''
@@ -47,17 +59,19 @@ class TilingOptimizer:
 
         return cp.Minimize(costs @ self._x)
 
-    def solve(self):
+    def solve(self) -> SolverResult:
         constraints = self._build_constraints()
         objective = self._build_objective()
         problem = cp.Problem(objective, constraints)
+        tol = self.settings.tolerance
 
         print("Solving...")
         problem.solve(verbose=True, solver='HIGHS',
             highs_options={
-                "mip_rel_gap": 0,
+                "mip_rel_gap": tol,
                 })
-        print("Status:", problem.status)
-
-        return self._x.value
-
+        
+        if problem.status != 'optimal':
+            return SolverResult(False, problem.status)
+        else:
+            return SolverResult(True, problem.status, self._x.value)

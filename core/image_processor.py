@@ -1,9 +1,7 @@
 from skimage import filters
-from PIL import Image, ImageDraw
-import os
+from PIL import Image
 from .config import ImageSettings
 import numpy as np
-import json
 
 NUM_COLOURS = 10
 
@@ -11,14 +9,14 @@ class ImageData:
     '''
     Computes and houses image data necessary for creating a tiling of the image
     '''
-    def __init__(self, image_path: str, settings: ImageSettings):
+    def __init__(self, img, settings: ImageSettings):
         self.settings = settings
 
         num_rows = settings.num_rows
         num_cols = settings.num_cols
         block_size = settings.block_size
 
-        img = Image.open(image_path).convert("L")
+        img = img.convert("L")
         img = img.resize((num_cols*block_size, num_rows*block_size), Image.LANCZOS) # type: ignore
         self.img_arr = np.array(img)
 
@@ -63,12 +61,9 @@ class Palette:
     '''
     A colour palette used for tiling the image
     '''
-    def __init__(self, path: str):
-        with open(path, "r") as f:
-            palette_data = json.load(f)
-
-        self.colours = [tuple(colour) for colour in palette_data["colours"]]
-        self.num_colours = len(self.colours)
+    def __init__(self, colours: list[tuple]):
+        self.colours = colours
+        self.num_colours = len(colours)
 
     def colour_to_brightness(self):
         brightness_values = []

@@ -1,3 +1,4 @@
+import numpy as np
 from PIL import Image, ImageDraw
 from .image_processor import Palette
 from .config import ImageSettings
@@ -8,7 +9,7 @@ class TilingRenderer:
     '''
     Renders an image tiling solution
     '''
-    def __init__(self, tiles: TileSet, palette: Palette, solution: list, image_settings: ImageSettings):
+    def __init__(self, tiles: TileSet, palette: Palette, solution: np.ndarray, image_settings: ImageSettings):
         self.tiles = tiles
         self.palette = palette
         self.solution = solution
