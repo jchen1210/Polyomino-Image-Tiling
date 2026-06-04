@@ -83,9 +83,6 @@ class TileSet:
     '''
     def __init__(self, base_tiles: list[Tile], scales: list[int]):
         self.tiles = []
-        self.placements = []
-        self.width = None
-        self.height = None
 
         copy_scales = list(scales)
         if 1 not in scales:
@@ -97,29 +94,20 @@ class TileSet:
                 for rotation in tile.rotations():
                     self.tiles.append(rotation.scaled(scale))
 
-    def set_placements(self, width: int, height: int) -> list:
-        self.width = width
-        self.height = height
+    def generate_placements(self, num_cols: int, num_rows: int) -> tuple[list, dict, int]:
         placements = []
-
-        for tile in self.tiles:
-            for i in range(height - tile.height + 1):
-                for j in range(width - tile.width + 1):
-                    placements.append((tile, (i, j)))
-
-        self.placements = placements
-        return self.placements
-    
-    def block_to_placements(self) -> dict:
         block_to_placements = defaultdict(list)
-        for i, placement in enumerate(self.placements):
-            tile = placement[0]
-            anchor = placement[1]
+        p = 0
+
+        placements = [
+            (tile, (i, j))
+            for tile in self.tiles
+            for i in range(num_rows - tile.height + 1)
+            for j in range(num_cols - tile.width + 1)
+            ]
+        
+        for p, (tile, anchor) in enumerate(placements):
             for block in tile.anchor_footprint(anchor):
-                block_to_placements[block].append(i)
-        return block_to_placements
-    
-    @property
-    def num_placements(self) -> int:
-        return len(self.placements)
-    
+                block_to_placements[block].append(p)
+
+        return placements, block_to_placements, len(placements)

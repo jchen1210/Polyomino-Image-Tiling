@@ -55,6 +55,14 @@ class ImageData:
                 block_brightness[i,j] = round(block.mean() / 255.0 * (NUM_COLOURS - 1))
         
         return block_brightness
+    
+    @property
+    def num_rows(self):
+        return self.settings.num_rows
+    
+    @property
+    def num_cols(self):
+        return self.settings.num_cols
 
 
 class Palette:

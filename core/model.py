@@ -14,6 +14,7 @@ class SolverResult:
     is_success: bool
     status: str
     values: Optional[np.ndarray] = None
+    placements: Optional[list[tuple]] = None
 
 
 class TilingOptimizer:
@@ -26,11 +27,16 @@ class TilingOptimizer:
         self.settings = settings
         self.palette = palette
 
-        self._x = cp.Variable(tile_set.num_placements, boolean=True)
+        self.placements, self.block_to_placements, self.num_placements = tile_set.generate_placements(
+            image_data.num_cols,
+            image_data.num_rows
+        )
+
+        self._x = cp.Variable(self.num_placements, boolean=True)
 
     def _build_constraints(self) -> list[cp.Constraint]:
         constraints = []
-        block_to_placements = self.tile_set.block_to_placements()
+        block_to_placements = self.block_to_placements
 
         for coord, placement_indices in block_to_placements.items():
             constraints.append(cp.sum(self._x[placement_indices]) == 1)
@@ -38,14 +44,14 @@ class TilingOptimizer:
         return constraints
 
     def _build_objective(self) -> cp.Minimize:
-        costs = np.zeros(self.tile_set.num_placements)
+        costs = np.zeros(self.num_placements)
         edge_weight = self.settings.edge_penalty_weight
         size_weight = self.settings.size_bonus_weight
         colour_to_brightness = self.palette.colour_to_brightness()
         edge_arr = self.image_data.laplacian
         brightness_arr = self.image_data.brightness_arr
 
-        for p, (tile, (i, j)) in enumerate(self.tile_set.placements):
+        for p, (tile, (i, j)) in enumerate(self.placements):
             err = 0
             max_edge = 0
             for (ii, jj) in tile.anchor_footprint((i, j)):
@@ -74,4 +80,4 @@ class TilingOptimizer:
         if problem.status != 'optimal':
             return SolverResult(False, problem.status)
         else:
-            return SolverResult(True, problem.status, self._x.value)
+            return SolverResult(True, problem.status, self._x.value, self.placements)

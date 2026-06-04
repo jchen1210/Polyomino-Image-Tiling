@@ -50,7 +50,6 @@ POLYOMINOES = [
 
 tiles = [Tile(POLYOMINOES[i % len(POLYOMINOES)], tuple(colour)) for i, colour in enumerate(palette.colours)]
 tileset = TileSet(tiles, SCALES)
-tileset.set_placements(NUM_COLS, NUM_ROWS)
 
 ###############################
 # Create and solve model
@@ -65,9 +64,10 @@ result = tiling_optimizer.solve()
 
 if result.is_success:
     assert result.values is not None
+    assert result.placements is not None
     
     print('Problem status: optimal')
-    renderer = TilingRenderer(tileset, palette, result.values, image_settings)
+    renderer = TilingRenderer(result.values, result.placements, image_settings)
     output_image = renderer.render()
 
     output_image.save(OUTPUT_IMAGE_PATH)

@@ -9,22 +9,21 @@ class TilingRenderer:
     '''
     Renders an image tiling solution
     '''
-    def __init__(self, tiles: TileSet, palette: Palette, solution: np.ndarray, image_settings: ImageSettings):
-        self.tiles = tiles
-        self.palette = palette
+    def __init__(self, solution: np.ndarray, placements: list[tuple], image_settings: ImageSettings):
         self.solution = solution
         self.settings = image_settings
+        self.placements = placements
 
     def render(self):
         num_rows = self.settings.num_rows
         num_cols = self.settings.num_cols
         block_size = self.settings.block_size
-        placements = self.tiles.placements
+        placements = self.placements
 
         result = Image.new("RGB",(num_cols*block_size,num_rows*block_size),(255,255,255))
         draw = ImageDraw.Draw(result)
 
-        for p, val in enumerate(self.solution): # type: ignore
+        for p, val in enumerate(self.solution):
             if val > 0.5:
                 tile, (i, j) = placements[p]
                 footprint = tile.anchor_footprint((i, j))
