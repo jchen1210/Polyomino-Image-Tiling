@@ -3,8 +3,6 @@ from PIL import Image
 from .config import ImageSettings
 import numpy as np
 
-NUM_COLOURS = 10
-
 class ImageData:
     '''
     Computes and houses image data necessary for creating a tiling of the image
@@ -15,55 +13,26 @@ class ImageData:
         num_rows = settings.num_rows
         num_cols = settings.num_cols
         block_size = settings.block_size
-
-        img = img.convert("L")
         img = img.resize((num_cols*block_size, num_rows*block_size), Image.LANCZOS) # type: ignore
-        self.img_arr = np.array(img)
-        self._laplacian = None
-        self._brightnesses = None
+
+        greyscale_img = img.convert("L")
+        self._greyscale_px = np.array(greyscale_img)
+        self._img_px = np.array(img)
+        self._laplacian_grid = None
+        self._brightness_grid = None
+        self._rgb_grid = None
 
     @property
-    def laplacian(self):
-        if self._laplacian is None:
-            num_rows = self.num_rows
-            num_cols = self.num_cols
-            block_size = self.settings.block_size
-
-            laplace_edges = filters.laplace(self.img_arr / 255.0)
-
-            edge_block = np.zeros((num_rows, num_cols))
-            for i in range(num_rows):
-                for j in range(num_cols):
-                    block = laplace_edges[i*block_size:(i+1)*block_size,
-                                        j*block_size:(j+1)*block_size]
-                    edge_block[i,j] = np.mean(np.abs(block))
-
-            edge_block /= np.max(edge_block)
-            edge_block = np.clip(edge_block, 0, 1)
-
-            self._laplacian = edge_block
-            return self._laplacian
-        else:
-            return self._laplacian
-
+    def laplacian_grid(self):
+        if self._laplacian_grid is None:
+            self._laplacian_grid = self._compute_laplacian_grid()
+        return self._laplacian_grid
+        
     @property
-    def brightnesses(self):
-        if self._brightnesses is None:
-            num_rows = self.num_rows
-            num_cols = self.num_cols
-            block_size = self.settings.block_size
-
-            brightness_arr = np.zeros((num_rows, num_cols))
-            for i in range(num_rows):
-                for j in range(num_cols):
-                    block = self.img_arr[i*block_size:(i+1)*block_size,
-                                        j*block_size:(j+1)*block_size]
-                    brightness_arr[i,j] = round(block.mean() / 255.0 * (NUM_COLOURS - 1))
-            
-            self._brightnesses = brightness_arr
-            return brightness_arr
-        else:
-            return self._brightnesses
+    def rgb_grid(self):
+        if self._rgb_grid is None:
+            self._rgb_grid = self._compute_rgb_grid() / 255.0
+        return self._rgb_grid
     
     @property
     def num_rows(self):
@@ -72,6 +41,40 @@ class ImageData:
     @property
     def num_cols(self):
         return self.settings.num_cols
+    
+    def _compute_laplacian_grid(self):
+        num_rows = self.num_rows
+        num_cols = self.num_cols
+        block_size = self.settings.block_size
+
+        laplace_px = filters.laplace(self._greyscale_px / 255.0)
+
+        laplacian_grid = np.zeros((num_rows, num_cols))
+        for i in range(num_rows):
+            for j in range(num_cols):
+                block = laplace_px[i*block_size:(i+1)*block_size,
+                                   j*block_size:(j+1)*block_size]
+                laplacian_grid[i,j] = np.mean(np.abs(block))
+
+        laplacian_grid /= np.max(laplacian_grid)
+        laplacian_grid = np.clip(laplacian_grid, 0, 1)
+
+        return laplacian_grid
+    
+    def _compute_rgb_grid(self):
+        num_rows = self.num_rows
+        num_cols = self.num_cols
+        block_size = self.settings.block_size
+        img_px = self._img_px
+
+        rgb_grid = np.zeros((num_rows, num_cols, 3))
+        for i in range(num_rows):
+            for j in range(num_cols):
+                block = img_px[i*block_size:(i+1)*block_size,
+                               j*block_size:(j+1)*block_size]
+                rgb_grid[i, j] = np.mean(block, axis=(0, 1))
+
+        return rgb_grid
 
 
 class Palette:
@@ -81,15 +84,3 @@ class Palette:
     def __init__(self, colours: list[tuple]):
         self.colours = colours
         self.num_colours = len(colours)
-
-    def colour_to_brightness(self):
-        brightness_values = []
-        for (r, g, b) in self.colours:
-            brightness = 0.299*r + 0.587*g + 0.114*b
-            brightness_values.append(brightness)
-
-        brightness_values = np.array(brightness_values)
-        normalized_brightness = (brightness_values - brightness_values.min()) / \
-                            (brightness_values.max() - brightness_values.min()) * 9
-        self.colour_to_brightness_dict = dict(zip(self.colours, normalized_brightness))
-        return self.colour_to_brightness_dict

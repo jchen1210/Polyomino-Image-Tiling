@@ -47,23 +47,23 @@ class TilingOptimizer:
         costs = np.zeros(self.num_placements)
         edge_weight = self.settings.edge_penalty_weight
         size_weight = self.settings.size_bonus_weight
-        colour_to_brightness = self.palette.colour_to_brightness()
-        edge_arr = self.image_data.laplacian
-        brightness_arr = self.image_data.brightnesses
+        edge_grid = self.image_data.laplacian_grid
+        rgb_grid = self.image_data.rgb_grid
 
         for p, (tile, (i, j)) in enumerate(self.placements):
             err = 0
             max_edge = 0
+            normalized_tile = np.array(tile.colour) / 255.0
             for (ii, jj) in tile.anchor_footprint((i, j)):
-                err += (colour_to_brightness[tile.colour] - brightness_arr[ii,jj])**2
-                max_edge = max(max_edge, edge_arr[ii,jj])
+                err += np.sum((normalized_tile - rgb_grid[ii, jj]) ** 2)
+                max_edge = max(max_edge, edge_grid[ii,jj])
 
             edge_pen = edge_weight * max_edge * (tile.scale - 1)**2
-            size_bonus = -size_weight * (tile.scale - 1)
+            size_bonus = -size_weight * (tile.scale - 1)**2
 
             costs[p] = err + edge_pen + size_bonus
 
-        return cp.Minimize(costs @ self._x)
+        return cp.Minimize(cp.sum(cp.multiply(costs, self._x)))
 
     def solve(self) -> SolverResult:
         constraints = self._build_constraints()
