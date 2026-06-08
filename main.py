@@ -10,12 +10,13 @@ from core import Polyomino, TileSet, Tile, OptimizationSettings, ImageSettings, 
 # Problem Dimensions
 ###############################
 
-NUM_ROWS = 100
-NUM_COLS = 160
+NUM_ROWS = 104
+NUM_COLS = 80
 BLOCK_SIZE = 8
 SCALES = [1, 2]
 EDGE_WEIGHT = 0.3
 SIZE_BONUS = 0.1
+SOURCE_NAME = 'pearl-earring'
 
 random.seed(42)
 np.random.seed(42)
@@ -24,11 +25,11 @@ np.random.seed(42)
 # Config
 ###############################
 
-TARGET_IMAGE_PATH = os.path.join(os.path.dirname(__file__), 'sources/starry-night.jpg')
-OUTPUT_IMAGE_PATH = f"output/starrynight-{NUM_COLS}x{NUM_ROWS}-edge{EDGE_WEIGHT}-size{SIZE_BONUS}.png"
+TARGET_IMAGE_PATH = os.path.join(os.path.dirname(__file__), f'sources/{SOURCE_NAME}.jpg')
+OUTPUT_IMAGE_PATH = f"output/{SOURCE_NAME}-{NUM_COLS}x{NUM_ROWS}-edge{EDGE_WEIGHT}-size{SIZE_BONUS}.png"
 image = Image.open(TARGET_IMAGE_PATH)
 
-PALETTE_PATH = os.path.join(os.path.dirname(__file__), 'colours/starry-night-colours.json')
+PALETTE_PATH = os.path.join(os.path.dirname(__file__), f'colours/{SOURCE_NAME}-colours.json')
 with open(PALETTE_PATH, "r") as f:
     palette_data = json.load(f)
 colours = [tuple(colour) for colour in palette_data['colours']]

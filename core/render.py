@@ -1,8 +1,6 @@
 import numpy as np
 from PIL import Image, ImageDraw
-from .image_processor import Palette
 from .config import ImageSettings
-from .tiles import TileSet
 
 
 class TilingRenderer:

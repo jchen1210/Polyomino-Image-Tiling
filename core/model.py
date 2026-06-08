@@ -2,7 +2,7 @@ import numpy as np
 import cvxpy as cp
 from dataclasses import dataclass
 from typing import Optional
-from .tiles import TileSet, Tile
+from .tiles import TileSet
 from .config import OptimizationSettings
 from .image_processor import ImageData, Palette
 
