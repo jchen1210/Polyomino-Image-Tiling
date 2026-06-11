@@ -46,6 +46,9 @@ class TilingOptimizer:
         presolve = self.settings.presolve
         threshold = self.settings.presolve_threshold
 
+        if presolve:
+            print("Presolving model...")
+
         for (tile, (i, j)) in raw_placements:
             footprint_mask = tile.footprint_mask
             normalized_tile = np.array(tile.colour) / 255.0
@@ -96,7 +99,7 @@ class TilingOptimizer:
         tol = self.settings.tolerance
 
         print("Solving...")
-        problem.solve(verbose=True, solver='HIGHS',
+        problem.solve(verbose=False, solver='HIGHS',
             highs_options={
                 "mip_rel_gap": tol,
                 })

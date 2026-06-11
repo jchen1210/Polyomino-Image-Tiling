@@ -11,14 +11,14 @@ from core import Polyomino, TileSet, Tile, OptimizationSettings, ImageSettings, 
 # Config
 ###############################
 
-NUM_ROWS = 40
-NUM_COLS = 64
+NUM_ROWS = 20
+NUM_COLS = 32
 BLOCK_SIZE = 8
-SCALES = [1, 2, 4]
+SCALES = [1, 2]
 EDGE_WEIGHT = 0.35
 SIZE_BONUS = 0.15
 SOURCE_NAME = 'starry-night'
-PRESOLVE = True
+PRESOLVE = False
 PRESOLVE_THRESHOLD = 0.25
 OPT_TOLERANCE = 0.05
 

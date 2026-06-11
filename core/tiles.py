@@ -19,7 +19,7 @@ class Polyomino:
         seen_shapes = set()
         for k in range(4):
             rotated_mask = np.rot90(self.footprint_mask, k).copy()
-            shape_sig = rotated_mask.tobytes()
+            shape_sig = tuple(map(tuple, rotated_mask))
 
             if shape_sig not in seen_shapes:
                 seen_shapes.add(shape_sig)
