@@ -8,6 +8,8 @@ class OptimizationSettings:
     edge_penalty_weight: float
     size_bonus_weight: float
     tolerance: float = 0
+    presolve: bool = True
+    presolve_threshold: float = 0.25
 
 @dataclass
 class ImageSettings:

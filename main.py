@@ -1,22 +1,26 @@
 import numpy as np
-from PIL import Image
 import os
 import random
 import json
 import uuid
+from PIL import Image
+from pathlib import Path
 from core import Polyomino, TileSet, Tile, OptimizationSettings, ImageSettings, ImageData, Palette, TilingOptimizer, TilingRenderer
 
 ###############################
 # Problem Dimensions
 ###############################
 
-NUM_ROWS = 104
-NUM_COLS = 80
+NUM_ROWS = 160
+NUM_COLS = 256
 BLOCK_SIZE = 8
-SCALES = [1, 2]
-EDGE_WEIGHT = 0.3
-SIZE_BONUS = 0.1
-SOURCE_NAME = 'pearl-earring'
+SCALES = [1, 2, 4, 8]
+EDGE_WEIGHT = 0.35
+SIZE_BONUS = 0.15
+SOURCE_NAME = 'starry-night'
+PRESOLVE = True
+PRESOLVE_THRESHOLD = 0.25
+OPT_TOLERANCE = 0.05
 
 random.seed(42)
 np.random.seed(42)
@@ -26,7 +30,16 @@ np.random.seed(42)
 ###############################
 
 TARGET_IMAGE_PATH = os.path.join(os.path.dirname(__file__), f'sources/{SOURCE_NAME}.jpg')
-OUTPUT_IMAGE_PATH = f"output/{SOURCE_NAME}-{NUM_COLS}x{NUM_ROWS}-edge{EDGE_WEIGHT}-size{SIZE_BONUS}.png"
+
+output_dir = Path("output") / f"edge{EDGE_WEIGHT}-size{SIZE_BONUS}"
+filename = f"{SOURCE_NAME}-{NUM_COLS}x{NUM_ROWS}"
+
+if PRESOLVE:
+    filename += f"-pre"
+
+OUTPUT_IMAGE_PATH = output_dir / f"{filename}.png"
+OUTPUT_IMAGE_PATH.parent.mkdir(parents=True, exist_ok=True)
+
 image = Image.open(TARGET_IMAGE_PATH)
 
 PALETTE_PATH = os.path.join(os.path.dirname(__file__), f'colours/{SOURCE_NAME}-colours.json')
@@ -35,7 +48,7 @@ with open(PALETTE_PATH, "r") as f:
 colours = [tuple(colour) for colour in palette_data['colours']]
 
 image_settings = ImageSettings(NUM_ROWS, NUM_COLS, BLOCK_SIZE)
-optimization_settings = OptimizationSettings(EDGE_WEIGHT, SIZE_BONUS, 0.04)
+optimization_settings = OptimizationSettings(EDGE_WEIGHT, SIZE_BONUS, OPT_TOLERANCE, PRESOLVE, PRESOLVE_THRESHOLD)
 palette = Palette(colours)
 image_data = ImageData(image, image_settings)
 

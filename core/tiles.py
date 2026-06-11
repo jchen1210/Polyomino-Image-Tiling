@@ -1,5 +1,3 @@
-from collections import defaultdict
-
 class Polyomino:
     '''
     A Polyomino shape, equipped with the ability to rotate and rescale
@@ -94,20 +92,12 @@ class TileSet:
                 for rotation in tile.rotations():
                     self.tiles.append(rotation.scaled(scale))
 
-    def generate_placements(self, num_cols: int, num_rows: int) -> tuple[list, dict, int]:
-        placements = []
-        block_to_placements = defaultdict(list)
-        p = 0
-
+    def generate_placements(self, num_cols: int, num_rows: int) -> tuple[list, int]:
         placements = [
             (tile, (i, j))
             for tile in self.tiles
             for i in range(num_rows - tile.height + 1)
             for j in range(num_cols - tile.width + 1)
             ]
-        
-        for p, (tile, anchor) in enumerate(placements):
-            for block in tile.anchor_footprint(anchor):
-                block_to_placements[block].append(p)
 
-        return placements, block_to_placements, len(placements)
+        return placements, len(placements)
