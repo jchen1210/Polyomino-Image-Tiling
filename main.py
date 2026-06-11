@@ -8,13 +8,13 @@ from pathlib import Path
 from core import Polyomino, TileSet, Tile, OptimizationSettings, ImageSettings, ImageData, Palette, TilingOptimizer, TilingRenderer
 
 ###############################
-# Problem Dimensions
+# Config
 ###############################
 
-NUM_ROWS = 160
-NUM_COLS = 256
+NUM_ROWS = 40
+NUM_COLS = 64
 BLOCK_SIZE = 8
-SCALES = [1, 2, 4, 8]
+SCALES = [1, 2, 4]
 EDGE_WEIGHT = 0.35
 SIZE_BONUS = 0.15
 SOURCE_NAME = 'starry-night'
@@ -24,10 +24,6 @@ OPT_TOLERANCE = 0.05
 
 random.seed(42)
 np.random.seed(42)
-
-###############################
-# Config
-###############################
 
 TARGET_IMAGE_PATH = os.path.join(os.path.dirname(__file__), f'sources/{SOURCE_NAME}.jpg')
 
@@ -57,10 +53,27 @@ image_data = ImageData(image, image_settings)
 ###############################
 
 POLYOMINOES = [
-    Polyomino("L",  [(0,0),(0,1),(1,0)]),
-    Polyomino("I3", [(0,0),(0,1),(0,2)]),
-    Polyomino("D2h",[(0,0),(0,1)]),
-    Polyomino("D2v",[(0,0),(1,0)])
+    # L-tromino
+    Polyomino(np.array([
+        [1, 1],
+        [1, 0]
+    ])),
+
+    # I-tromino
+    Polyomino(np.array([
+        [1, 1, 1]
+    ])),
+
+    # Horizontal Domino
+    Polyomino(np.array([
+        [1, 1]
+    ])),
+
+    # Vertical Domino (added so that dominoes are assigned more colours)
+    Polyomino(np.array([
+        [1],
+        [1]
+    ]))
 ]
 
 tiles = [Tile(POLYOMINOES[i % len(POLYOMINOES)], tuple(colour)) for i, colour in enumerate(palette.colours)]

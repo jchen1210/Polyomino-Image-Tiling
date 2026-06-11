@@ -47,24 +47,26 @@ class TilingOptimizer:
         threshold = self.settings.presolve_threshold
 
         for (tile, (i, j)) in raw_placements:
-            err = 0
-            max_edge = 0
+            footprint_mask = tile.footprint_mask
             normalized_tile = np.array(tile.colour) / 255.0
-            anchor_footprint = tile.anchor_footprint((i, j))
-            for (ii, jj) in anchor_footprint:
-                err += np.sum((normalized_tile - rgb_grid[ii, jj]) ** 2)
-                max_edge = max(max_edge, edge_grid[ii,jj])
+
+            rgb_window = rgb_grid[i:i+tile.height, j:j+tile.width]
+            window_errors = (normalized_tile - rgb_window) ** 2
+            rgb_error = np.sum(window_errors * footprint_mask[:, :, np.newaxis])
+            
+            edge_window = edge_grid[i:i+tile.height, j:j+tile.width]
+            max_edge = np.max(edge_window * footprint_mask)
 
             edge_pen = edge_weight * max_edge * (tile.scale - 1)**2
             size_bonus = -size_weight * (tile.scale - 1)**2
-            tile_cost = err + edge_pen + size_bonus
+            tile_cost = rgb_error + edge_pen + size_bonus
 
-            if presolve and (tile_cost / len(tile.footprint)) > threshold:
+            if presolve and (tile_cost / np.sum(footprint_mask)) > threshold:
                 continue
 
             self.costs.append(tile_cost)
             self.placements.append((tile, (i, j)))
-            for coord in anchor_footprint:
+            for coord in tile.anchor_footprint((i, j)):
                 self.block_to_placements[coord].append(self.num_placements)
             self.num_placements += 1
 

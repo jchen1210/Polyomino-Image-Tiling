@@ -1,40 +1,43 @@
+import numpy as np
+
 class Polyomino:
     '''
     A Polyomino shape, equipped with the ability to rotate and rescale
     '''
-    def __init__(self, name: str, footprint: list, scale: int = 1):
-        self.name = name
-        self.footprint = footprint
-        self.height = max(r for r,c in footprint) + 1
-        self.width  = max(c for r,c in footprint) + 1
+    def __init__(self, footprint: np.ndarray, scale: int = 1):
+        self.footprint_mask = footprint
+        self._footprint_list = None
+        self.height, self.width = np.shape(footprint)
         self.scale = scale
 
     def rotate(self) -> 'Polyomino':
-        rotated = [(c, -r) for r,c in self.footprint]
-        min_r = min(r for r,c in rotated)
-        min_c = min(c for r,c in rotated)
-        rotated = [(r-min_r, c-min_c) for r,c in rotated]
-        return Polyomino(self.name, rotated)
+        rotated_mask = np.rot90(self.footprint_mask).copy()
+        return Polyomino(rotated_mask, self.scale)
 
     def rotations(self) -> list['Polyomino']:
-        rots = []
-        s = self
-        for _ in range(4):
-            if not any(set(s.footprint) == set(r.footprint) for r in rots):
-                rots.append(s)
-            s = s.rotate()
-        return rots
-    
+        rotations = []
+        seen_shapes = set()
+        for k in range(4):
+            rotated_mask = np.rot90(self.footprint_mask, k).copy()
+            shape_sig = rotated_mask.tobytes()
+
+            if shape_sig not in seen_shapes:
+                seen_shapes.add(shape_sig)
+                rotations.append(Polyomino(rotated_mask, self.scale))
+            else:
+                break
+        return rotations
+
     def scaled(self, scale: int) -> 'Polyomino':
-        scaled_footprint = []
-        for dr, dc in self.footprint:
-            for u in range(scale):
-                for v in range(scale):
-                    i = dr*scale + u
-                    j = dc*scale + v
-                    scaled_footprint.append((i,j))
-        scaled = Polyomino(f"{self.name}_x{scale}", scaled_footprint, scale)
-        return scaled
+        scaling_matrix = np.ones((scale, scale))
+        scaled_mask = np.kron(self.footprint_mask, scaling_matrix)
+        return Polyomino(scaled_mask, scale)
+    
+    @property
+    def footprint_list(self):
+        if self._footprint_list is None:
+            self._footprint_list = [tuple(coord) for coord in np.argwhere(self.footprint_mask == 1)]
+        return self._footprint_list
     
 class Tile:
     '''
@@ -46,7 +49,7 @@ class Tile:
 
     def anchor_footprint(self, anchor: tuple) -> list[tuple]:
         anchored_footprint = []
-        for block in self.footprint:
+        for block in self.footprint_list:
             anchored_footprint.append((block[0] + anchor[0], block[1] + anchor[1]))
         return anchored_footprint
 
@@ -66,8 +69,12 @@ class Tile:
         return self._polyomino.width
     
     @property
-    def footprint(self) -> list[tuple]:
-        return self._polyomino.footprint
+    def footprint_list(self) -> list[tuple]:
+        return self._polyomino.footprint_list
+    
+    @property
+    def footprint_mask(self) -> np.ndarray:
+        return self._polyomino.footprint_mask
     
     @property
     def scale(self) -> int:
