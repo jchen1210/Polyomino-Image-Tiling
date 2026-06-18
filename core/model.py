@@ -3,9 +3,7 @@ import cvxpy as cp
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import Optional
-from .tiles import TileSet
-from .config import OptimizationSettings
-from .image_processor import ImageData, Palette
+from core import TileSet, OptimizationSettings, TileConfig, ImageData
 
 @dataclass
 class SolverResult:
@@ -22,16 +20,16 @@ class TilingOptimizer:
     '''
     Creates a CVXPY problem to tile an image
     '''
-    def __init__(self, image_data: ImageData, tile_set: TileSet, settings: OptimizationSettings, palette: Palette):
+    def __init__(self, image_data: ImageData, tile_config: TileConfig, settings: OptimizationSettings):
         self.image_data = image_data
-        self.tile_set = tile_set
         self.settings = settings
-        self.palette = palette
         self._x = None
         self.costs = []
         self.placements = []
         self.num_placements = 0
         self.block_to_placements = defaultdict(list)
+
+        self.tile_set = TileSet(tile_config.shapes, tile_config.scales, image_data.palette)
 
     def prepare(self):
         raw_placements, raw_num_placements = self.tile_set.generate_placements(
@@ -39,19 +37,20 @@ class TilingOptimizer:
             self.image_data.num_rows
         )
         print(f"Your problem has {raw_num_placements} possible tile placements")
-        edge_weight = self.settings.edge_penalty_weight
-        size_weight = self.settings.size_bonus_weight
+        s = self.settings
+        edge_weight = s.edge_penalty_weight
+        size_weight = s.size_bonus_weight
         edge_grid = self.image_data.laplacian_grid
-        rgb_grid = self.image_data.rgb_grid
-        presolve = self.settings.presolve
-        threshold = self.settings.presolve_threshold
+        rgb_grid = self.image_data.rgb_grid / 255.0     # normalizing to range [0, 1]
+        presolve = s.presolve
+        threshold = s.presolve_threshold
 
         if presolve:
             print("Presolving model...")
 
         for (tile, (i, j)) in raw_placements:
             footprint_mask = tile.footprint_mask
-            normalized_tile = np.array(tile.colour) / 255.0
+            normalized_tile = tile.colour / 255.0
 
             rgb_window = rgb_grid[i:i+tile.height, j:j+tile.width]
             window_errors = (normalized_tile - rgb_window) ** 2
@@ -99,7 +98,7 @@ class TilingOptimizer:
         tol = self.settings.tolerance
 
         print("Solving...")
-        problem.solve(verbose=False, solver='HIGHS',
+        problem.solve(verbose=True, solver='HIGHS',
             highs_options={
                 "mip_rel_gap": tol,
                 })

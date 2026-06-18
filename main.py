@@ -5,22 +5,24 @@ import json
 import uuid
 from PIL import Image
 from pathlib import Path
-from core import Polyomino, TileSet, Tile, OptimizationSettings, ImageSettings, ImageData, Palette, TilingOptimizer, TilingRenderer
+from core import Polyomino, OptimizationSettings, ImageSettings, TileConfig, ImageData, TilingOptimizer, TilingRenderer
 
 ###############################
 # Config
 ###############################
 
-NUM_ROWS = 20
-NUM_COLS = 32
+NUM_ROWS = 100
+NUM_COLS = 160
 BLOCK_SIZE = 8
 SCALES = [1, 2]
 EDGE_WEIGHT = 0.35
 SIZE_BONUS = 0.15
 SOURCE_NAME = 'starry-night'
-PRESOLVE = False
+PRESOLVE = True
 PRESOLVE_THRESHOLD = 0.25
-OPT_TOLERANCE = 0.05
+OPT_TOLERANCE = 0.08
+AUTOPICK_COLOURS = True
+NUM_COLOURS = 14
 
 random.seed(42)
 np.random.seed(42)
@@ -32,21 +34,26 @@ filename = f"{SOURCE_NAME}-{NUM_COLS}x{NUM_ROWS}"
 
 if PRESOLVE:
     filename += f"-pre"
+if AUTOPICK_COLOURS:
+    filename += f"-auto{NUM_COLOURS}"
 
 OUTPUT_IMAGE_PATH = output_dir / f"{filename}.png"
 OUTPUT_IMAGE_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 image = Image.open(TARGET_IMAGE_PATH)
 
-PALETTE_PATH = os.path.join(os.path.dirname(__file__), f'colours/{SOURCE_NAME}-colours.json')
-with open(PALETTE_PATH, "r") as f:
-    palette_data = json.load(f)
-colours = [tuple(colour) for colour in palette_data['colours']]
-
-image_settings = ImageSettings(NUM_ROWS, NUM_COLS, BLOCK_SIZE)
+image_settings = ImageSettings(NUM_ROWS, NUM_COLS, BLOCK_SIZE, AUTOPICK_COLOURS, NUM_COLOURS)
 optimization_settings = OptimizationSettings(EDGE_WEIGHT, SIZE_BONUS, OPT_TOLERANCE, PRESOLVE, PRESOLVE_THRESHOLD)
-palette = Palette(colours)
+
 image_data = ImageData(image, image_settings)
+if AUTOPICK_COLOURS:
+    image_data.prepare_palette()
+else:
+    PALETTE_PATH = os.path.join(os.path.dirname(__file__), f'colours/{SOURCE_NAME}-colours.json')
+    with open(PALETTE_PATH, "r") as f:
+        palette_data = json.load(f)
+    colours = np.array(palette_data['colours'])
+    image_data.prepare_palette(colours)
 
 ###############################
 # Tile setup
@@ -69,21 +76,33 @@ POLYOMINOES = [
         [1, 1]
     ])),
 
-    # Vertical Domino (added so that dominoes are assigned more colours)
     Polyomino(np.array([
-        [1],
+        [1, 1, 1],
+        [1, 0, 0]
+    ])),
+
+    Polyomino(np.array([
+        [1, 1, 1],
+        [0, 1, 0]
+    ])),
+
+    Polyomino(np.array([
+        [0, 1, 1],
+        [1, 1, 0]
+    ])),
+
+    Polyomino(np.array([
         [1]
-    ]))
+    ])),
 ]
 
-tiles = [Tile(POLYOMINOES[i % len(POLYOMINOES)], tuple(colour)) for i, colour in enumerate(palette.colours)]
-tileset = TileSet(tiles, SCALES)
+tile_config = TileConfig(POLYOMINOES, SCALES)
 
 ###############################
 # Create and solve model
 ###############################
 
-tiling_optimizer = TilingOptimizer(image_data, tileset, optimization_settings, palette)
+tiling_optimizer = TilingOptimizer(image_data, tile_config, optimization_settings)
 result = tiling_optimizer.solve()
 
 ###############################

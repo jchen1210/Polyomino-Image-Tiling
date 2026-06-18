@@ -43,7 +43,12 @@ class Tile:
     '''
     A Polyomino tile with a colour
     '''
-    def __init__(self, polyomino: Polyomino, colour: tuple[int, int, int]):
+    def __init__(self, polyomino: Polyomino, colour: np.ndarray):
+        if  colour.shape != (3,):
+            raise ValueError(
+                f"Palette must be a 1D array of shape (3,). "
+                f"Got an array with shape {colour.shape} instead."
+            )
         self._polyomino = polyomino
         self.colour = colour
 
@@ -86,8 +91,9 @@ class TileSet:
     '''
     A set of Polyomino tiles used to tile a rectangular plane
     '''
-    def __init__(self, base_tiles: list[Tile], scales: list[int]):
+    def __init__(self, base_shapes: list[Polyomino], scales: list[int], palette: np.ndarray):
         self.tiles = []
+        base_tiles = self.assign_colours(base_shapes, palette)
 
         copy_scales = list(scales)
         if 1 not in scales:
@@ -99,7 +105,15 @@ class TileSet:
                 for rotation in tile.rotations():
                     self.tiles.append(rotation.scaled(scale))
 
-    def generate_placements(self, num_cols: int, num_rows: int) -> tuple[list, int]:
+    def assign_colours(self, shapes: list[Polyomino], palette: np.ndarray) -> list[Tile]:
+        '''
+        Rotates through the polyomino shapes and assigns colours until no more colours are left in the palette.
+        Shapes may end up with different numbers of assigned colours
+        '''
+        tiles = [Tile(shapes[i % len(shapes)], colour) for i, colour in enumerate(palette)]
+        return tiles
+
+    def generate_placements(self, num_cols, num_rows) -> tuple[list, int]:
         placements = [
             (tile, (i, j))
             for tile in self.tiles

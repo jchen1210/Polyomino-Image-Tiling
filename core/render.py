@@ -1,6 +1,6 @@
 import numpy as np
 from PIL import Image, ImageDraw
-from .config import ImageSettings
+from core import ImageSettings
 
 
 class TilingRenderer:
@@ -29,7 +29,7 @@ class TilingRenderer:
 
                 for (ii,jj) in footprint:
                     result.paste(
-                        Image.new("RGB", (block_size, block_size), (tile.colour)),
+                        Image.new("RGB", (block_size, block_size), tuple(tile.colour)),
                         (jj*block_size, ii*block_size)
                     )
 

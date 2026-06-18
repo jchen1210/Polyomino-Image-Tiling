@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+from typing import Optional
+from core import Polyomino
 
 @dataclass
 class OptimizationSettings:
@@ -14,8 +16,18 @@ class OptimizationSettings:
 @dataclass
 class ImageSettings:
     '''
-    Settings for the image tiling
+    Settings for the image processor
     '''
     num_rows: int
     num_cols: int
     block_size: int
+    auto_pick: bool = True
+    requested_colour_budget: Optional[int] = None
+
+@dataclass
+class TileConfig:
+    '''
+    Config for the tiles used to cover an image
+    '''
+    shapes: list[Polyomino]
+    scales: list[int]
