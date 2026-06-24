@@ -96,9 +96,11 @@ class ImageData:
         self._palette = palette
 
     def _auto_pick_palette(self, num_colours):
-        X = self.rgb_grid.reshape(-1, self.rgb_grid.shape[-1])
+        X = self._img_px.reshape(-1, self._img_px.shape[-1])
+        saturation = (np.max(X, axis=1) - np.min(X, axis=1)) / np.max(X, axis=1)
+        saturation[np.isnan(saturation)] = 0
         kmeans = KMeans(n_clusters=num_colours, init='k-means++', random_state=42)
-        kmeans.fit(X)
+        kmeans.fit(X, sample_weight=saturation**2)
         centroids = kmeans.cluster_centers_
         self._palette = np.clip(np.round(centroids), 0, 255).astype(int)
         return self._palette
